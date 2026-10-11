@@ -1,0 +1,1605 @@
+<!-- ============================================================
+     家事ポイントアプリ  ―  画面の骨組み
+     下の include('css') のところに css.html の中身が差し込まれる
+     ============================================================ -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>家事ポイント</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#d99a1f">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="家事ポイント">
+  <style>
+/* ============================================================
+   家事ポイントアプリ  ―  見た目
+   スマホを基準に作って、画面が広いときだけPC用に変える
+   ============================================================ */
+
+:root{
+  --bg:#f5f6f8;
+  --card:#ffffff;
+  --line:#e3e6ea;
+  --text:#1c2024;
+  --muted:#6b7280;
+  --primary:#d99a1f;      /* ポイントっぽい金色 */
+  --primary-dark:#b57e15;
+  --ok:#1f9d55;
+  --warn:#d99100;
+  --danger:#d64545;
+  --earn:#1f9d55;
+  --spend:#c2410c;
+  --radius:12px;
+  --tap:44px;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif;
+  background:var(--bg); color:var(--text);
+  font-size:15px; line-height:1.6;
+  -webkit-text-size-adjust:100%;
+}
+.hidden{display:none !important;}
+.muted{color:var(--muted); font-size:13px;}
+.error{color:var(--danger); font-size:13px; min-height:1.2em;}
+h1{font-size:20px; margin:0 0 8px;}
+h2{font-size:15px; margin:0 0 10px; font-weight:700;}
+
+/* ── 入口の画面（誰か選ぶ・読み込み中）───────── */
+.gate{
+  position:fixed; inset:0; background:var(--bg);
+  display:flex; align-items:center; justify-content:center; padding:20px; z-index:50;
+}
+.gate-box{
+  background:var(--card); border-radius:var(--radius); padding:28px 22px;
+  width:100%; max-width:360px; text-align:center;
+  box-shadow:0 2px 12px rgba(0,0,0,.06);
+}
+.gate-box .form{text-align:left; margin-top:16px;}
+.auth-switch{margin-top:14px;}
+.auth-switch a{color:var(--primary-dark); font-weight:700; text-decoration:none;}
+.auth-switch a:hover{text-decoration:underline;}
+.who-list{display:flex; flex-direction:column; gap:8px; margin-top:16px;}
+.who-btn{
+  border:1px solid var(--line); background:#fff; border-radius:10px;
+  padding:14px; font-size:16px; font-weight:700; cursor:pointer; min-height:var(--tap);
+}
+.who-btn:hover{background:#fafbfc; border-color:var(--primary);}
+.spinner{
+  width:28px; height:28px; margin:0 auto 12px;
+  border:3px solid var(--line); border-top-color:var(--primary);
+  border-radius:50%; animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ── 上のバー ───────────────────── */
+.topbar{
+  position:sticky; top:0; z-index:20;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:8px; padding:10px 14px;
+  background:var(--card); border-bottom:1px solid var(--line);
+}
+.topbar-left{display:flex; align-items:center; gap:8px; min-width:0;}
+.topbar strong{font-size:15px; white-space:nowrap;}
+.chip{
+  background:#fbf1de; color:var(--primary-dark); border-radius:999px;
+  padding:2px 10px; font-size:12px; white-space:nowrap; font-weight:700;
+  overflow:hidden; text-overflow:ellipsis; max-width:8em; cursor:pointer;
+}
+.chip-outline{
+  background:none; border:1px solid var(--line); color:var(--muted);
+  cursor:default; font-weight:600;
+}
+.chip-outline:empty{display:none;}
+.icon-btn{
+  border:1px solid var(--line); background:var(--card); border-radius:8px;
+  width:36px; height:36px; font-size:18px; cursor:pointer; color:var(--muted);
+}
+
+/* ── タブ ─────────────────────── */
+.tabs{display:none;}
+.bottomnav{
+  position:fixed; left:0; right:0; bottom:0; z-index:20;
+  display:flex; background:var(--card); border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.bottomnav button{
+  flex:1; border:0; background:none; padding:8px 2px 6px;
+  font-size:10.5px; color:var(--muted); cursor:pointer; min-height:var(--tap);
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+}
+.bottomnav button .ico{font-size:18px; line-height:1;}
+.bottomnav button.active{color:var(--primary-dark); font-weight:700;}
+
+/* ── 本体 ───────────────────────── */
+main{padding:12px 12px 84px; max-width:1100px; margin:0 auto;}
+.card{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  padding:14px; margin-bottom:12px;
+}
+
+/* ── ランキング（ホーム）─────────────── */
+.rank-list{display:flex; flex-direction:column; gap:8px;}
+.rank-item{
+  display:flex; align-items:center; gap:12px;
+  padding:12px; border:1px solid var(--line); border-radius:10px; background:#fff;
+}
+.rank-medal{font-size:22px; width:30px; text-align:center; flex:0 0 auto;}
+.rank-name{flex:1; font-weight:700; font-size:15px; min-width:0; overflow:hidden; text-overflow:ellipsis;}
+.rank-point{font-size:20px; font-weight:800; color:var(--primary-dark); font-variant-numeric:tabular-nums; flex:0 0 auto;}
+.rank-item.me{border-color:var(--primary); background:#fffaf0;}
+.badge.streak{background:#fdeee0; color:#c2410c;}
+
+/* ── カード見出し＋切替ボタン（がんばり度など）───── */
+.card-head{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:10px;}
+.card-head h2{margin:0;}
+.member-seg.small{margin-bottom:0;}
+.member-seg.small button{flex:0 0 auto; min-width:0; padding:6px 12px; font-size:12.5px;}
+
+/* ── がんばり度サマリー ───────────────── */
+.summary-row{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
+.summary-row:last-of-type{margin-bottom:0;}
+.summary-name{flex:0 0 64px; font-size:13px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.summary-bar-track{flex:1; height:10px; border-radius:999px; background:var(--line); overflow:hidden;}
+.summary-bar-fill{height:100%; background:var(--primary); border-radius:999px;}
+.summary-val{flex:0 0 auto; font-size:12.5px; font-weight:700; color:var(--earn); font-variant-numeric:tabular-nums;}
+.summary-top{margin-top:10px;}
+
+/* ── 家事タイルの「今日やった」「担当」表示 ───────── */
+.tile{position:relative;}
+.tile.done-today{border-color:var(--ok); background:#f3faf5;}
+.done-mark{position:absolute; top:6px; left:8px; font-size:10.5px; color:var(--ok); font-weight:700;}
+.badge.rotation{position:absolute; top:6px; right:8px; background:#eef2ff; color:#4338ca; font-size:9.5px; padding:2px 6px;}
+.badge.rotation.mine{background:#e6f4ea; color:var(--ok);}
+
+/* ── 設定：担当ローテーションの選択肢 ───────── */
+.rotation-pick{flex-direction:row; flex-wrap:wrap; gap:4px 14px; margin-top:6px;}
+.rotation-pick label.check{flex:0 0 auto;}
+
+/* ── 証拠写真（記録タブ・スマホのみ）───────── */
+.photo-box{margin-bottom:14px;}
+.photo-preview{
+  display:flex; align-items:center; gap:10px; padding:8px 10px;
+  border:1px solid var(--line); border-radius:10px; background:#fbf1de;
+}
+.photo-preview img{width:56px; height:56px; object-fit:cover; border-radius:8px; flex:0 0 auto;}
+.photo-preview .muted{flex:1;}
+
+/* ── 履歴の証拠写真サムネイル ───────── */
+.photo-thumb-btn{
+  flex:0 0 auto; width:44px; height:44px; border-radius:8px; overflow:hidden;
+  border:1px solid var(--line); padding:0; cursor:pointer; background:#f1f3f4;
+}
+.photo-thumb-btn img{width:100%; height:100%; object-fit:cover; display:block;}
+
+/* ── 選択カード（誰として記録するか）──────── */
+.member-seg{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;}
+.member-seg button{
+  flex:1 1 auto; min-width:70px; border:1px solid var(--line); background:#fff;
+  border-radius:10px; padding:10px 8px; font-weight:700; cursor:pointer; min-height:var(--tap);
+}
+.member-seg button.active{background:var(--primary); border-color:var(--primary); color:#fff;}
+
+/* ── 家事・ごほうびカードのグリッド ───────── */
+.tile-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
+.tile{
+  border:1px solid var(--line); background:#fff; border-radius:12px;
+  padding:14px 10px; text-align:center; cursor:pointer; min-height:80px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+}
+.tile:hover{border-color:var(--primary);}
+.tile:disabled{opacity:.45; cursor:not-allowed;}
+.tile .name{font-weight:700; font-size:14px; word-break:break-word;}
+.tile .pt{font-size:13px; color:var(--earn); font-weight:700;}
+.tile.reward .pt{color:var(--spend);}
+.tile.reward:disabled .pt{color:var(--muted);}
+
+.balance-banner{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:14px; border-radius:12px; background:#fbf1de; margin-bottom:12px;
+}
+.balance-banner .label{font-size:13px; color:var(--primary-dark); font-weight:700;}
+.balance-banner .val{font-size:26px; font-weight:800; color:var(--primary-dark); font-variant-numeric:tabular-nums;}
+
+/* ── 絞り込みツールバー ─────────────── */
+.toolbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; align-items:center;}
+.toolbar > *{flex:1 1 140px; min-width:120px; margin-top:0;}
+label.check{
+  display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted);
+  flex:0 0 auto; min-width:0; cursor:pointer; font-weight:600;
+}
+label.check input{width:18px; height:18px; min-height:0; margin:0;}
+
+input,select,textarea,button{font-family:inherit; font-size:16px;}
+input[type=text],input[type=password],select,textarea{
+  width:100%; padding:10px 12px; margin-top:4px;
+  border:1px solid var(--line); border-radius:9px; background:#fff;
+  color:var(--text); min-height:var(--tap);
+}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--primary); outline-offset:-1px;}
+
+/* ── パスワード表示/非表示トグル ─────────────── */
+.pw-field{position:relative; margin-top:4px;}
+.pw-field input{margin-top:0; padding-right:44px;}
+.pw-toggle{
+  position:absolute; right:2px; top:50%; transform:translateY(-50%);
+  border:0; background:none; cursor:pointer; font-size:17px; line-height:1;
+  padding:8px; min-height:0; color:var(--muted);
+}
+.pw-toggle:hover{color:var(--text);}
+
+/* ── ボタン ───────────────────── */
+.btn{
+  border:1px solid var(--line); background:#fff; color:var(--text);
+  border-radius:9px; padding:10px 14px; cursor:pointer; min-height:var(--tap);
+  font-weight:600; white-space:nowrap;
+}
+.btn:hover{background:#f7f8fa;}
+.btn.primary{background:var(--primary); border-color:var(--primary); color:#fff;}
+.btn.primary:hover{background:var(--primary-dark);}
+.btn.danger{color:var(--danger); border-color:#f0c8c8;}
+.btn.block{width:100%;}
+.btn.tiny{padding:5px 10px; min-height:32px; font-size:13px;}
+.btn:disabled{opacity:.5; cursor:not-allowed;}
+
+/* ── 履歴リスト ───────────────────── */
+.list{display:flex; flex-direction:column; gap:6px;}
+.list-item{
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+  padding:10px 12px; border:1px solid var(--line); border-radius:9px; background:#fff;
+}
+.list-item .main{min-width:0; flex:1;}
+.list-item .title{font-weight:600; font-size:14px; overflow:hidden; text-overflow:ellipsis;}
+.list-item .sub{font-size:12px; color:var(--muted);}
+.list-item .actions{display:flex; gap:6px; flex:0 0 auto;}
+.pt-badge{font-weight:800; font-variant-numeric:tabular-nums; white-space:nowrap;}
+.pt-badge.plus{color:var(--earn);}
+.pt-badge.minus{color:var(--spend);}
+.badge{
+  display:inline-block; padding:2px 8px; border-radius:999px;
+  font-size:11px; font-weight:700; white-space:nowrap;
+}
+.badge.canceled{background:#f5e6e6; color:var(--danger);}
+.badge.pending{background:#fdf1da; color:var(--warn);}
+.badge.done{background:#e6f4ea; color:var(--ok); white-space:normal;}
+
+/* ── 受け渡しタブ ───────────────────── */
+.handover-item{flex-wrap:wrap;}
+.handover-actions{display:flex; gap:6px; flex-wrap:wrap; align-items:center; flex:0 0 auto;}
+
+/* ── ダイアログ ─────────────────── */
+.modal{
+  position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:60;
+  display:flex; align-items:flex-end; justify-content:center; padding:0;
+}
+.modal-box{
+  background:#fff; border-radius:16px 16px 0 0; padding:18px;
+  width:100%; max-width:520px; max-height:88vh; overflow-y:auto;
+}
+.modal-actions{display:flex; gap:8px; margin-top:14px;}
+.modal-actions .btn{flex:1;}
+.form label{display:block; margin-bottom:12px; font-size:13px; color:var(--muted); font-weight:600;}
+
+/* ── お知らせ ─────────────────── */
+.toast{
+  position:fixed; left:50%; bottom:80px; transform:translateX(-50%);
+  background:#23282e; color:#fff; padding:12px 18px; border-radius:10px;
+  font-size:14px; z-index:70; max-width:90vw; text-align:center;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);
+}
+.toast.err{background:var(--danger);}
+.toast.ok{background:var(--ok);}
+
+/* ============================================================
+   PC（画面が広いとき）だけの見た目
+   ============================================================ */
+@media (min-width:760px){
+  body{font-size:14px;}
+  .bottomnav{display:none;}
+  .tabs{
+    display:flex; gap:4px; padding:0 14px; background:var(--card);
+    border-bottom:1px solid var(--line); position:sticky; top:52px; z-index:19;
+  }
+  .tabs button{
+    border:0; background:none; padding:12px 16px; cursor:pointer;
+    font-size:14px; font-weight:600; color:var(--muted);
+    border-bottom:2px solid transparent; white-space:nowrap;
+  }
+  .tabs button.active{color:var(--primary-dark); border-bottom-color:var(--primary);}
+  main{padding:16px 16px 40px;}
+  .card{padding:18px;}
+  .tile-grid{grid-template-columns:repeat(4,1fr);}
+  input,select,textarea,button{font-size:14px;}
+  .modal{align-items:center;}
+  .modal-box{border-radius:14px;}
+  .toast{bottom:32px;}
+  .mobile-only{display:none;}  /* 証拠写真はスマホでの撮影を想定しているためPCでは出さない */
+}
+</style>
+
+</head>
+<body>
+
+<!-- ── 家庭ログイン／新規登録の画面 ───────────────── -->
+<div id="authGate" class="gate hidden">
+  <div class="gate-box">
+    <h1>家事ポイント</h1>
+
+    <div id="authLogin">
+      <p class="muted">家庭名とパスワードでログインしてください。</p>
+      <form class="form" onsubmit="return false;">
+        <label>家庭名<input type="text" id="au_loginFamily" autocomplete="username"></label>
+        <label>パスワード
+          <div class="pw-field">
+            <input type="password" id="au_loginPassword" autocomplete="current-password">
+            <button type="button" class="pw-toggle" onclick="togglePw('au_loginPassword', this)" aria-label="パスワードを表示">👁</button>
+          </div>
+        </label>
+      </form>
+      <p class="error" id="au_loginError"></p>
+      <button class="btn primary block" onclick="doLogin()">ログイン</button>
+      <p class="muted auth-switch">はじめて使う家庭ですか？
+        <a href="#" onclick="showAuthMode('register'); return false;">新しい家庭を登録する</a>
+      </p>
+    </div>
+
+    <div id="authRegister" class="hidden">
+      <p class="muted">新しい家庭を登録します。家庭名とパスワードは家族で共有してください。</p>
+      <form class="form" onsubmit="return false;">
+        <label>家庭名<input type="text" id="au_regFamily" placeholder="例：山田家"></label>
+        <label>パスワード
+          <div class="pw-field">
+            <input type="password" id="au_regPassword" autocomplete="new-password">
+            <button type="button" class="pw-toggle" onclick="togglePw('au_regPassword', this)" aria-label="パスワードを表示">👁</button>
+          </div>
+        </label>
+        <label>最初の親の名前<input type="text" id="au_regParentName" placeholder="例：パパ"></label>
+      </form>
+      <p class="error" id="au_regError"></p>
+      <button class="btn primary block" onclick="doRegister()">登録してはじめる</button>
+      <p class="muted auth-switch">
+        <a href="#" onclick="showAuthMode('login'); return false;">すでに登録済みの家庭でログインする</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ── 「あなたは誰？」の画面（この端末で誰として使うか選ぶ）───────── -->
+<div id="whoGate" class="gate hidden">
+  <div class="gate-box">
+    <h1>家事ポイント</h1>
+    <p class="muted">あなたは誰ですか？<br>（この端末での表示に使います。あとで変更できます）</p>
+    <div id="whoList" class="who-list"></div>
+  </div>
+</div>
+
+<!-- ── 読み込み中 ───────────────────────────── -->
+<div id="loading" class="gate">
+  <div class="gate-box">
+    <div class="spinner"></div>
+    <p class="muted">読み込み中…</p>
+  </div>
+</div>
+
+<!-- ── アプリ本体 ──────────────────────────── -->
+<div id="app" class="hidden">
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <strong>家事ポイント</strong>
+      <span id="familyName" class="chip chip-outline"></span>
+      <span id="whoami" class="chip" title="タップで自分を変更" onclick="openWhoChange()"></span>
+    </div>
+    <div class="topbar-left">
+      <button class="icon-btn" onclick="openAnnouncementList()" title="お知らせ">📢</button>
+      <button class="icon-btn" onclick="openFeedback()" title="不具合・要望を報告する">📝</button>
+      <button class="icon-btn" onclick="reloadAll()" title="最新に更新">⟳</button>
+      <button class="icon-btn" onclick="doLogout()" title="ログアウト">⏻</button>
+    </div>
+  </header>
+
+  <!-- PC用のタブ -->
+  <nav class="tabs" id="tabs"></nav>
+
+  <main id="main">
+
+    <!-- ========== ホーム（ランキング） ========== -->
+    <section class="view" data-view="home">
+      <div class="card">
+        <h2>今のポイント</h2>
+        <div id="rankList" class="rank-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2>がんばり度</h2>
+          <div id="sum_seg" class="member-seg small">
+            <button data-days="7" class="active" onclick="selectSummaryDays(7)">直近7日</button>
+            <button data-days="30" onclick="selectSummaryDays(30)">直近30日</button>
+          </div>
+        </div>
+        <div id="summaryBody"></div>
+      </div>
+      <div id="rotationCard" class="card hidden">
+        <h2>今週の担当</h2>
+        <div id="rotationList" class="list"></div>
+      </div>
+      <div class="card">
+        <h2>最近のできごと</h2>
+        <div id="recentList" class="list"></div>
+      </div>
+    </section>
+
+    <!-- ========== 記録（家事を完了する） ========== -->
+    <section class="view hidden" data-view="record">
+      <div class="card">
+        <h2>だれが？</h2>
+        <div id="r_memberSeg" class="member-seg"></div>
+
+        <div id="r_photoBox" class="photo-box mobile-only">
+          <input type="file" id="r_photoInput" accept="image/*" capture="environment" class="hidden" onchange="onPhotoSelected(event)">
+          <button type="button" class="btn block photo-btn" id="r_photoBtn" onclick="document.getElementById('r_photoInput').click()">📷 証拠写真をつける（任意）</button>
+          <div id="r_photoPreview" class="photo-preview hidden">
+            <img id="r_photoImg" alt="証拠写真プレビュー">
+            <span class="muted">この写真を次の記録に添付します</span>
+            <button type="button" class="btn tiny danger" onclick="clearPendingPhoto()">✕ 外す</button>
+          </div>
+        </div>
+
+        <h2>何をした？（タップで記録）</h2>
+        <div id="choreGrid" class="tile-grid"></div>
+      </div>
+    </section>
+
+    <!-- ========== 交換（ごほうびを注文する） ========== -->
+    <section class="view hidden" data-view="redeem">
+      <div class="card">
+        <h2>だれが？</h2>
+        <div id="x_memberSeg" class="member-seg"></div>
+        <div class="balance-banner">
+          <span class="label">今の残高</span>
+          <span class="val" id="x_balance">0pt</span>
+        </div>
+        <h2>ごほうびを選ぶ（タップで注文）</h2>
+        <div id="rewardGrid" class="tile-grid"></div>
+        <p class="muted">注文した時点でポイントは引かれます。実際に受け取ったら「受け渡し」タブで確認してください。</p>
+      </div>
+    </section>
+
+    <!-- ========== 受け渡し（受け取る側・渡す側の相互確認） ========== -->
+    <section class="view hidden" data-view="handover">
+      <div class="card">
+        <h2>受け渡し待ちのごほうび</h2>
+        <div id="handoverInfo" class="muted"></div>
+        <div id="handoverList" class="list"></div>
+      </div>
+    </section>
+
+    <!-- ========== 履歴 ========== -->
+    <section class="view hidden" data-view="history">
+      <div class="card">
+        <div class="toolbar">
+          <select id="h_member" onchange="loadHistory()"></select>
+          <label class="check"><input type="checkbox" id="h_canceled" onchange="loadHistory()"> 取消済も表示</label>
+        </div>
+        <div id="historyInfo" class="muted"></div>
+        <div id="historyBody" class="list"></div>
+      </div>
+    </section>
+
+    <!-- ========== 設定（役割＝親のメンバーだけに表示）========== -->
+    <section class="view hidden" data-view="settings">
+      <div class="card">
+        <h2>家庭のパスワード</h2>
+        <form class="form" onsubmit="return false;">
+          <label>現在のパスワード
+            <div class="pw-field">
+              <input type="password" id="fp_current" autocomplete="current-password">
+              <button type="button" class="pw-toggle" onclick="togglePw('fp_current', this)" aria-label="パスワードを表示">👁</button>
+            </div>
+          </label>
+          <label>新しいパスワード
+            <div class="pw-field">
+              <input type="password" id="fp_new" autocomplete="new-password">
+              <button type="button" class="pw-toggle" onclick="togglePw('fp_new', this)" aria-label="パスワードを表示">👁</button>
+            </div>
+          </label>
+        </form>
+        <p class="error" id="fp_error"></p>
+        <button class="btn primary block" onclick="doChangeFamilyPassword()">パスワードを変更</button>
+      </div>
+      <div class="card">
+        <h2>メンバー</h2>
+        <div id="s_memberList" class="list"></div>
+        <button class="btn block" onclick="openMemberForm()">＋ メンバーを追加</button>
+      </div>
+      <div class="card">
+        <h2>家事マスタ</h2>
+        <div id="s_choreList" class="list"></div>
+        <button class="btn block" onclick="openChoreForm()">＋ 家事を追加</button>
+      </div>
+      <div class="card">
+        <h2>ごほうびマスタ</h2>
+        <div id="s_rewardList" class="list"></div>
+        <button class="btn block" onclick="openRewardForm()">＋ ごほうびを追加</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- スマホ用の下タブ -->
+  <nav class="bottomnav" id="bottomnav"></nav>
+</div>
+
+<!-- ── ダイアログ（自分を変更・取消） ────────────────── -->
+<div id="modal" class="modal hidden">
+  <div class="modal-box">
+    <h2 id="modalTitle"></h2>
+    <div id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">やめる</button>
+      <button class="btn primary" id="modalOk">確定</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 画面下に出るお知らせ ───────────────── -->
+<div id="toast" class="toast hidden"></div>
+
+<script>
+/* ============================================================
+   家事ポイントアプリ  ―  画面の動き
+   google.script.run を Promise に包んで await で使えるようにする
+   ============================================================ */
+
+/* インストール版（PWA）のときは build-pwa.js がここにGASのURLを入れる。
+   GASのWebアプリとして開いたときは空のまま → google.script.run を使う */
+const API_URL = "https://script.google.com/macros/s/AKfycbzJLqtvvNSFA1WL331khJkCC7Ga5HXsBYM5JI7GuNLDysnxfojrXKdBlCeYsIXGaE1YAQ/exec";
+
+function gs(fnName){
+  const args = Array.prototype.slice.call(arguments, 1);
+  if (API_URL) return gsFetch_(fnName, args);
+  return new Promise(function(resolve, reject){
+    google.script.run
+      .withSuccessHandler(resolve)
+      .withFailureHandler(function(err){ reject(err); })
+      [fnName].apply(null, args);
+  });
+}
+
+/* PWA版：GASの doPost に fetch で送る。
+   Content-Type を text/plain にするのは、ブラウザの事前確認（CORSプリフライト）を起こさないため */
+async function gsFetch_(fnName, args){
+  let res;
+  try{
+    res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ fn: fnName, args: args })
+    });
+  }catch(e){
+    const err = new Error('インターネットにつながっていません。電波のよいところでもう一度ためしてください');
+    err.network = true;
+    throw err;
+  }
+  let data;
+  try{ data = await res.json(); }
+  catch(e){ throw new Error('サーバーの応答が読めませんでした（' + res.status + '）'); }
+  if (!data.ok) throw new Error(data.error);
+  return data.result;
+}
+
+const S = {
+  token:      '',         // ログイン中の家庭のセッショントークン
+  familyId:   '',
+  familyName: '',
+  members:  [],
+  chores:   [],
+  rewards:  [],
+  balances: [],
+  announcements: [],
+  today:    '',
+  todayDone: {},         // 今日すでに記録済みの「メンバーID|家事ID」（毎日の家事チェックリスト用）
+  streaks:  {},          // メンバーID → 連続記録日数
+  summaryDays: 7,        // 「がんばり度」カードで表示中の期間（7 or 30）
+  me:       '',          // この端末で「自分」として選んでいるメンバーID
+  recordMemberId: '',    // 「記録」タブでいま選んでいるメンバー
+  redeemMemberId: '',    // 「交換」タブでいま選んでいるメンバー
+  pendingPhoto: '',      // 次の記録に添付する証拠写真（data URL。スマホのカメラで撮影）
+  view: 'home'
+};
+
+const VIEWS = [
+  { key:'home',     label:'ホーム',   ico:'🏆' },
+  { key:'record',   label:'記録',     ico:'✅' },
+  { key:'redeem',   label:'交換',     ico:'🎁' },
+  { key:'handover', label:'受け渡し', ico:'🤝' },
+  { key:'history',  label:'履歴',     ico:'🕒' },
+  { key:'settings', label:'設定',     ico:'⚙️' }
+];
+
+
+/* ============================================================
+   1. 起動・ログイン・ログアウト
+   ============================================================ */
+
+window.addEventListener('load', boot);
+
+async function boot(){
+  const savedToken = localStorage.getItem('kp_token');
+  if (savedToken){
+    S.token = savedToken;
+    try{
+      await loadBootstrapAndContinue();
+      return;
+    }catch(err){
+      // 圏外のときはログアウトさせずに「再読み込み」を出す
+      if (err.network){
+        document.querySelector('#loading .gate-box').innerHTML =
+          '<p>' + esc(err.message) + '</p><button class="btn primary block" onclick="location.reload()">もう一度読み込む</button>';
+        return;
+      }
+      // トークンが切れている・無効などのときはログイン画面からやり直す
+      localStorage.removeItem('kp_token');
+      S.token = '';
+    }
+  }
+  show('loading', false);
+  showAuthMode('login');
+  show('authGate', true);
+}
+
+function showAuthMode(mode){
+  show('authGate', true);
+  document.getElementById('authLogin').classList.toggle('hidden', mode !== 'login');
+  document.getElementById('authRegister').classList.toggle('hidden', mode !== 'register');
+  document.getElementById('au_loginError').textContent = '';
+  document.getElementById('au_regError').textContent = '';
+}
+
+async function doLogin(){
+  const familyName = document.getElementById('au_loginFamily').value.trim();
+  const password    = document.getElementById('au_loginPassword').value;
+  const errEl = document.getElementById('au_loginError');
+  errEl.textContent = '';
+  if (!familyName || !password){ errEl.textContent = '家庭名とパスワードを入力してください'; return; }
+  try{
+    const res = await gs('loginFamily', { familyName: familyName, password: password });
+    if (!res.ok){ errEl.textContent = res.message; return; }
+    await onAuthSuccess(res);
+  }catch(err){ errEl.textContent = errText(err); }
+}
+
+async function doRegister(){
+  const familyName  = document.getElementById('au_regFamily').value.trim();
+  const password    = document.getElementById('au_regPassword').value;
+  const parentName  = document.getElementById('au_regParentName').value.trim();
+  const errEl = document.getElementById('au_regError');
+  errEl.textContent = '';
+  if (!familyName || !password || !parentName){ errEl.textContent = 'すべて入力してください'; return; }
+  try{
+    const res = await gs('registerFamily', { familyName: familyName, password: password, firstParentName: parentName });
+    if (!res.ok){ errEl.textContent = res.message; return; }
+    await onAuthSuccess(res);
+  }catch(err){ errEl.textContent = errText(err); }
+}
+
+async function onAuthSuccess(res){
+  S.token = res.token;
+  localStorage.setItem('kp_token', res.token);
+  show('authGate', false);
+  show('loading', true);
+  try{
+    await loadBootstrapAndContinue();
+  }catch(err){ toastErr(err); }
+}
+
+async function doLogout(){
+  try{ await gs('logoutFamily', { token: S.token }); }catch(err){ /* 無視してよい */ }
+  localStorage.removeItem('kp_token');
+  location.reload();
+}
+
+/** ログイン済みトークンでデータを読み込み、「あなたは誰？」または本体画面に進む */
+async function loadBootstrapAndContinue(){
+  const b = await gs('getBootstrap', S.token);
+  S.members     = b.members;
+  S.chores      = b.chores;
+  S.rewards     = b.rewards;
+  S.balances    = b.balances;
+  S.announcements = b.announcements || [];
+  S.today       = b.today;
+  S.todayDone   = toKeySet_(b.todayDone);
+  S.streaks     = b.streaks || {};
+  S.familyId    = b.familyId;
+  S.familyName  = b.familyName;
+
+  const savedMe = localStorage.getItem(meKey_());
+  if (savedMe && S.members.filter(function(m){ return m.id === savedMe; })[0]){
+    S.me = savedMe;
+    startApp();
+    return;
+  }
+  show('loading', false);
+  show('whoGate', true);
+  renderWhoList();
+}
+
+function meKey_(){ return 'kp_me_' + S.familyId; }
+
+function renderWhoList(){
+  const el = document.getElementById('whoList');
+  if (!S.members.length){
+    el.innerHTML = '<p class="muted">まだメンバーが登録されていません。「設定」タブ（親の人がログイン後に表示されます）から追加してください。</p>';
+    return;
+  }
+  el.innerHTML = S.members.map(function(m){
+    return '<button class="who-btn" onclick="selectWho(\''+esc(m.id)+'\')">'+escapeHtml(m.name)+'</button>';
+  }).join('');
+}
+
+function selectWho(id){
+  localStorage.setItem(meKey_(), id);
+  S.me = id;
+  show('whoGate', false);
+  startApp();
+}
+
+function openWhoChange(){
+  document.getElementById('modalTitle').textContent = '自分を変更';
+  document.getElementById('modalBody').innerHTML =
+      '<p class="muted">この端末で「自分」として使う人を選び直します。</p>'
+    + '<div class="who-list">' + S.members.map(function(m){
+        return '<button class="who-btn" onclick="doWhoChange(\''+esc(m.id)+'\')">'+escapeHtml(m.name)+'</button>';
+      }).join('') + '</div>';
+  document.getElementById('modalOk').style.display = 'none';
+  show('modal', true);
+}
+
+function doWhoChange(id){
+  document.getElementById('modalOk').style.display = '';
+  localStorage.setItem(meKey_(), id);
+  S.me = id;
+  S.recordMemberId = id;
+  S.redeemMemberId = id;
+  document.getElementById('whoami').textContent = memberName(id);
+  closeModal();
+  buildNav();
+  if (S.view === 'settings' && !isParent()) switchView('home');
+  renderRecordTab();
+  renderRedeemTab();
+  toast(memberName(id) + 'にしました', 'ok');
+}
+
+async function startApp(){
+  show('loading', false);
+  show('app', true);
+  S.recordMemberId = S.me;
+  S.redeemMemberId = S.me;
+  document.getElementById('whoami').textContent = memberName(S.me);
+  document.getElementById('familyName').textContent = S.familyName || '';
+  buildNav();
+  fillMemberSelects();
+  renderAll();
+  switchView('home');
+  checkAnnouncements();
+}
+
+/** 全データを読み直して、開いているタブに関わらず再描画する */
+async function reloadAll(){
+  try{
+    const b = await gs('getBootstrap', S.token);
+    S.members  = b.members;
+    S.chores   = b.chores;
+    S.rewards  = b.rewards;
+    S.balances = b.balances;
+    S.announcements = b.announcements || [];
+    S.today       = b.today;
+    S.todayDone   = toKeySet_(b.todayDone);
+    S.streaks     = b.streaks || {};
+    fillMemberSelects();
+    buildNav();
+    renderAll();
+    if (S.view === 'history')  await loadHistory();
+    if (S.view === 'handover') await loadHandover();
+    if (S.view === 'settings') renderSettingsTab();
+  }catch(err){ toastErr(err); }
+}
+
+function renderAll(){
+  renderHome();
+  renderRecordTab();
+  renderRedeemTab();
+}
+
+
+/* ============================================================
+   2. ナビゲーション
+   ============================================================ */
+
+function isParent(){
+  const m = S.members.filter(function(x){ return x.id === S.me; })[0];
+  return !!m && m.role === '親';
+}
+
+function visibleViews_(){
+  return VIEWS.filter(function(v){ return v.key !== 'settings' || isParent(); });
+}
+
+function buildNav(){
+  const tabs = document.getElementById('tabs');
+  const bnav = document.getElementById('bottomnav');
+  const views = visibleViews_();
+  tabs.innerHTML = views.map(function(v){
+    return '<button data-nav="'+v.key+'" onclick="switchView(\''+v.key+'\')">'+v.label+'</button>';
+  }).join('');
+  bnav.innerHTML = views.map(function(v){
+    return '<button data-nav="'+v.key+'" onclick="switchView(\''+v.key+'\')">'
+         + '<span class="ico">'+v.ico+'</span>'+v.label+'</button>';
+  }).join('');
+  document.querySelectorAll('[data-nav]').forEach(function(el){
+    el.classList.toggle('active', el.dataset.nav === S.view);
+  });
+}
+
+function switchView(key){
+  if (key === 'settings' && !isParent()) key = 'home';
+  S.view = key;
+  document.querySelectorAll('.view').forEach(function(el){
+    el.classList.toggle('hidden', el.dataset.view !== key);
+  });
+  document.querySelectorAll('[data-nav]').forEach(function(el){
+    el.classList.toggle('active', el.dataset.nav === key);
+  });
+  window.scrollTo(0,0);
+  if (key === 'history')  loadHistory();
+  if (key === 'handover') loadHandover();
+  if (key === 'settings') renderSettingsTab();
+}
+
+
+/* ============================================================
+   3. ホーム（ランキング・最近のできごと）
+   ============================================================ */
+
+function renderHome(){
+  const el = document.getElementById('rankList');
+  if (!S.balances.length){
+    el.innerHTML = '<p class="muted">まだメンバーが登録されていません</p>';
+  }else{
+    const medals = ['🥇','🥈','🥉'];
+    el.innerHTML = S.balances.map(function(b, i){
+      const streak = S.streaks[b.memberId] || 0;
+      return '<div class="rank-item'+(b.memberId===S.me?' me':'')+'">'
+        + '<span class="rank-medal">'+(medals[i]||'')+'</span>'
+        + '<span class="rank-name">'+escapeHtml(b.name)
+        + (streak >= 2 ? ' <span class="badge streak">🔥'+streak+'日</span>' : '')
+        + '</span>'
+        + '<span class="rank-point">'+b.balance+'pt</span>'
+        + '</div>';
+    }).join('');
+  }
+  loadRecent();
+  loadSummary(S.summaryDays);
+  renderRotationCard();
+}
+
+async function loadRecent(){
+  try{
+    const res = await gs('getHistory', { token: S.token, limit: 8 });
+    document.getElementById('recentList').innerHTML = res.rows.length
+      ? res.rows.map(historyItemHtml).join('')
+      : '<p class="muted">まだ記録がありません</p>';
+  }catch(err){ /* 起動直後は無視 */ }
+}
+
+
+/* ============================================================
+   3.5. がんばり度サマリー（直近7日／30日）
+   ============================================================ */
+
+function selectSummaryDays(days){
+  S.summaryDays = days;
+  document.querySelectorAll('#sum_seg button').forEach(function(b){
+    b.classList.toggle('active', Number(b.dataset.days) === days);
+  });
+  loadSummary(days);
+}
+
+async function loadSummary(days){
+  const el = document.getElementById('summaryBody');
+  if (!el) return;
+  el.innerHTML = '<p class="muted">読み込み中…</p>';
+  try{
+    const s = await gs('getSummary', { token: S.token, days: days });
+    if (!s.byMember.length || !s.byMember.some(function(m){ return m.earned > 0 || m.spent > 0; })){
+      el.innerHTML = '<p class="muted">この期間の記録はまだありません</p>';
+      return;
+    }
+    const maxEarned = Math.max.apply(null, s.byMember.map(function(m){ return m.earned; }).concat([1]));
+    const bars = s.byMember.map(function(m){
+      const pct = Math.round((m.earned / maxEarned) * 100);
+      return '<div class="summary-row">'
+        + '<span class="summary-name">'+escapeHtml(m.name)+'</span>'
+        + '<div class="summary-bar-track"><div class="summary-bar-fill" style="width:'+pct+'%"></div></div>'
+        + '<span class="summary-val">+'+m.earned+'pt</span>'
+        + '</div>';
+    }).join('');
+    const top = s.byChore.length
+      ? '<p class="muted summary-top">よくやった家事：'
+        + s.byChore.map(function(c){ return escapeHtml(c.name)+'×'+c.count; }).join('　')
+        + '</p>'
+      : '';
+    el.innerHTML = bars + top;
+  }catch(err){ el.innerHTML = '<p class="muted">読み込みに失敗しました</p>'; }
+}
+
+
+/* ============================================================
+   3.6. 今週の担当（家事の担当ローテーション）
+   ============================================================ */
+
+function renderRotationCard(){
+  const card = document.getElementById('rotationCard');
+  if (!card) return;
+  const withRotation = S.chores.filter(function(c){ return c.rotation && c.rotation.length; });
+  if (!withRotation.length){ card.classList.add('hidden'); return; }
+  card.classList.remove('hidden');
+  document.getElementById('rotationList').innerHTML = withRotation.map(function(c){
+    return '<div class="list-item">'
+      + '<div class="main">'
+      + '<div class="title">'+escapeHtml(c.name)+'</div>'
+      + '<div class="sub">今週の担当：'+escapeHtml(memberName(c.assignedMemberId))+'</div>'
+      + '</div></div>';
+  }).join('');
+}
+
+
+/* ============================================================
+   4. 記録（家事の完了）
+   ============================================================ */
+
+function renderRecordTab(){
+  document.getElementById('r_memberSeg').innerHTML = memberSegHtml(S.recordMemberId, 'selectRecordMember');
+
+  const grid = document.getElementById('choreGrid');
+  grid.innerHTML = S.chores.length
+    ? S.chores.map(function(c){
+        const doneToday = c.daily && S.todayDone[S.recordMemberId + '|' + c.id];
+        const assignedToMe = c.assignedMemberId && c.assignedMemberId === S.recordMemberId;
+        return '<button class="tile'+(doneToday?' done-today':'')+'" onclick="recordChoreUI(\''+esc(c.id)+'\', this)">'
+          + (doneToday ? '<span class="done-mark">✔️ 今日やった</span>' : '')
+          + (c.assignedMemberId ? '<span class="badge rotation'+(assignedToMe?' mine':'')+'">担当：'+escapeHtml(memberName(c.assignedMemberId))+'</span>' : '')
+          + '<span class="name">'+escapeHtml(c.name)+'</span>'
+          + '<span class="pt">+'+c.points+'pt</span>'
+          + '</button>';
+      }).join('')
+    : '<p class="muted">まだ家事が登録されていません。「設定」タブ（親の人）から登録してください。</p>';
+
+  renderPhotoBox();
+}
+
+function selectRecordMember(id){
+  S.recordMemberId = id;
+  renderRecordTab();
+}
+
+async function recordChoreUI(choreId, btn){
+  if (!S.recordMemberId){ toast('だれが行うか選んでください','err'); return; }
+  btn.disabled = true;
+  try{
+    const res = await gs('recordChore', {
+      token: S.token, memberId: S.recordMemberId, choreId: choreId, memo: '',
+      photoDataUrl: S.pendingPhoto || ''
+    });
+    toast(res.message, 'ok');
+    clearPendingPhoto();
+    await reloadAll();
+  }catch(err){ toastErr(err); }
+  finally{ btn.disabled = false; }
+}
+
+
+/* ============================================================
+   3.5. 証拠写真（記録タブ・スマホのみ）
+   ============================================================ */
+
+function renderPhotoBox(){
+  const btn = document.getElementById('r_photoBtn');
+  const preview = document.getElementById('r_photoPreview');
+  if (!btn || !preview) return;
+  const has = !!S.pendingPhoto;
+  btn.classList.toggle('hidden', has);
+  preview.classList.toggle('hidden', !has);
+  if (has) document.getElementById('r_photoImg').src = S.pendingPhoto;
+}
+
+async function onPhotoSelected(ev){
+  const file = ev.target.files && ev.target.files[0];
+  ev.target.value = ''; // 同じ写真をもう一度選べるようにリセットしておく
+  if (!file) return;
+  try{
+    S.pendingPhoto = await resizeImageToDataUrl_(file, 1280, 0.75);
+    renderPhotoBox();
+    toast('写真をつけました。次に記録する家事に添付されます', 'ok');
+  }catch(err){ toastErr(err); }
+}
+
+function clearPendingPhoto(){
+  S.pendingPhoto = '';
+  renderPhotoBox();
+}
+
+/**
+ * 選んだ画像ファイルを、長辺がmaxDimに収まるよう縮小してJPEGのdata URLにする。
+ * スマホのカメラ写真は数MBになることがあるので、送信・保存の負担を減らすため。
+ */
+function resizeImageToDataUrl_(file, maxDim, quality){
+  return new Promise(function(resolve, reject){
+    const reader = new FileReader();
+    reader.onerror = function(){ reject(new Error('写真の読み込みに失敗しました')); };
+    reader.onload = function(){
+      const img = new Image();
+      img.onerror = function(){ reject(new Error('写真の読み込みに失敗しました')); };
+      img.onload = function(){
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim){
+          if (w >= h){ h = Math.round(h * maxDim / w); w = maxDim; }
+          else { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+
+/* ============================================================
+   5. 交換（ごほうび）
+   ============================================================ */
+
+function renderRedeemTab(){
+  document.getElementById('x_memberSeg').innerHTML = memberSegHtml(S.redeemMemberId, 'selectRedeemMember');
+  const bal = balanceOf(S.redeemMemberId);
+  document.getElementById('x_balance').textContent = bal + 'pt';
+
+  const grid = document.getElementById('rewardGrid');
+  grid.innerHTML = S.rewards.length
+    ? S.rewards.map(function(r){
+        const disabled = bal < r.cost;
+        return '<button class="tile reward" '+(disabled?'disabled':'')+' onclick="orderRewardUI(\''+esc(r.id)+'\', this)">'
+          + '<span class="name">'+escapeHtml(r.name)+'</span>'
+          + '<span class="pt">-'+r.cost+'pt</span>'
+          + '</button>';
+      }).join('')
+    : '<p class="muted">まだごほうびが登録されていません。「設定」タブ（親の人）から登録してください。</p>';
+}
+
+function selectRedeemMember(id){
+  S.redeemMemberId = id;
+  renderRedeemTab();
+}
+
+async function orderRewardUI(rewardId, btn){
+  if (!S.redeemMemberId){ toast('だれが注文するか選んでください','err'); return; }
+  btn.disabled = true;
+  try{
+    const res = await gs('orderReward', { token: S.token, memberId: S.redeemMemberId, rewardId: rewardId, memo: '' });
+    if (!res.ok){ toast(res.message, 'err'); return; }
+    toast(res.message, 'ok');
+    await reloadAll();
+  }catch(err){ toastErr(err); }
+  finally{ btn.disabled = false; }
+}
+
+
+/* ============================================================
+   5.5. 受け渡し（受け取る側・渡す側の相互確認）
+   ============================================================ */
+
+async function loadHandover(){
+  document.getElementById('handoverInfo').textContent = '読み込み中…';
+  try{
+    const rows = await gs('getPendingHandovers', S.token);
+    document.getElementById('handoverInfo').textContent = rows.length
+      ? rows.length + ' 件、受け渡し待ちです'
+      : '';
+    document.getElementById('handoverList').innerHTML = rows.length
+      ? rows.map(handoverItemHtml).join('')
+      : '<p class="muted">受け渡し待ちのごほうびはありません</p>';
+  }catch(err){ toastErr(err); }
+}
+
+function handoverItemHtml(r){
+  return '<div class="list-item handover-item">'
+    + '<div class="main">'
+    + '<div class="title">'+escapeHtml(r.memberName)+'　'+escapeHtml(r.itemName)+'</div>'
+    + '<div class="sub">'+esc(r.datetime)+'　-'+r.cost+'pt'+(r.memo?'　'+escapeHtml(r.memo):'')+'</div>'
+    + '</div>'
+    + '<div class="handover-actions">'
+    + (r.receiveConfirmed
+        ? '<span class="badge done">受取済</span>'
+        : '<button class="btn tiny" onclick="doConfirmReceive(\''+esc(r.id)+'\')">受け取った</button>')
+    + (r.handoverConfirmed
+        ? '<span class="badge done">渡し済（'+escapeHtml(r.giverName)+'）</span>'
+        : '<button class="btn tiny primary" onclick="openHandoverPicker(\''+esc(r.id)+'\')">渡した</button>')
+    + '</div></div>';
+}
+
+async function doConfirmReceive(id){
+  try{
+    const res = await gs('confirmReceive', { token: S.token, id: id });
+    toast(res.message, 'ok');
+    await reloadAll();
+  }catch(err){ toastErr(err); }
+}
+
+function openHandoverPicker(id){
+  const parents = S.members.filter(function(m){ return m.role === '親'; });
+  document.getElementById('modalTitle').textContent = '渡した人を選ぶ';
+  document.getElementById('modalOk').style.display = 'none';
+  if (!parents.length){
+    document.getElementById('modalBody').innerHTML =
+      '<p class="muted">「親」の役割を持つメンバーがいません。「設定」タブでメンバーの役割を設定してください。</p>';
+  } else {
+    document.getElementById('modalBody').innerHTML =
+        '<p class="muted">このごほうびを実際に渡した人を選んでください。</p>'
+      + '<div class="who-list">' + parents.map(function(m){
+          return '<button class="who-btn" onclick="doConfirmHandover(\''+esc(id)+'\',\''+esc(m.id)+'\')">'+escapeHtml(m.name)+'</button>';
+        }).join('') + '</div>';
+  }
+  show('modal', true);
+}
+
+async function doConfirmHandover(id, giverId){
+  closeModal();
+  document.getElementById('modalOk').style.display = '';
+  try{
+    const res = await gs('confirmHandover', { token: S.token, id: id, giverId: giverId });
+    toast(res.message, 'ok');
+    await reloadAll();
+  }catch(err){ toastErr(err); }
+}
+
+
+/* ============================================================
+   6. 履歴
+   ============================================================ */
+
+function fillMemberSelects(){
+  const opts = '<option value="">全員</option>' + S.members.map(function(m){
+    return '<option value="'+esc(m.id)+'">'+escapeHtml(m.name)+'</option>';
+  }).join('');
+  const el = document.getElementById('h_member');
+  const keep = el.value;
+  el.innerHTML = opts;
+  if (keep) el.value = keep;
+}
+
+async function loadHistory(){
+  const filters = {
+    token:           S.token,
+    memberId:        document.getElementById('h_member').value,
+    includeCanceled: document.getElementById('h_canceled').checked,
+    limit: 200
+  };
+  document.getElementById('historyInfo').textContent = '読み込み中…';
+  try{
+    const res = await gs('getHistory', filters);
+    document.getElementById('historyInfo').textContent = res.total + ' 件（表示 ' + res.rows.length + ' 件）';
+    document.getElementById('historyBody').innerHTML = res.rows.length
+      ? res.rows.map(function(r){ return historyItemHtml(r, true); }).join('')
+      : '<p class="muted">該当する記録はありません</p>';
+  }catch(err){ toastErr(err); }
+}
+
+/** 履歴1件分のHTML（ホームの「最近のできごと」と履歴タブで共用） */
+function historyItemHtml(r, withActions){
+  const isPlus = r.points >= 0;
+  const canceled = r.status === '取消済';
+  const pending = r.kind === '交換' && r.status === '受渡待ち';
+  const photoHtml = r.photoUrl
+    ? '<button type="button" class="photo-thumb-btn" onclick="openPhotoViewer(\''+esc(r.photoUrl)+'\')" title="証拠写真を見る">'
+      + '<img src="'+esc(toThumbUrl_(r.photoUrl))+'" alt="証拠写真"></button>'
+    : '';
+  return '<div class="list-item">'
+    + photoHtml
+    + '<div class="main">'
+    + '<div class="title">'+escapeHtml(r.memberName)+'　'+escapeHtml(r.itemName)
+    + (canceled ? ' <span class="badge canceled">取消済</span>' : '')
+    + (pending  ? ' <span class="badge pending">受渡待ち</span>' : '')
+    + '</div>'
+    + '<div class="sub">'+esc(r.datetime)+(r.reason?'　'+escapeHtml(r.reason):'')+'</div>'
+    + '</div>'
+    + '<span class="pt-badge '+(isPlus?'plus':'minus')+'">'+(isPlus?'+':'')+r.points+'pt</span>'
+    + (withActions && !canceled
+        ? '<div class="actions"><button class="btn tiny danger" onclick="openCancel(\''+r.kind+'\',\''+esc(r.id)+'\')">取消</button></div>'
+        : '')
+    + '</div>';
+}
+
+function openCancel(kind, id){
+  document.getElementById('modalTitle').textContent = '記録の取消';
+  document.getElementById('modalBody').innerHTML =
+      '<p>この記録を取り消します。行は消えず、状態が「取消済」になって履歴に残ります'
+    + (kind === '交換' ? '（ポイントは戻ります）。' : '。') + '</p>'
+    + '<label>取り消す理由（任意）<input type="text" id="x_reason" placeholder="例：間違えてタップした"></label>';
+  document.getElementById('modalOk').style.display = '';
+  document.getElementById('modalOk').textContent = '取消を確定';
+  document.getElementById('modalOk').onclick = async function(){
+    const reason = document.getElementById('x_reason').value.trim();
+    const fn = kind === '交換' ? 'cancelRedemption' : 'cancelChoreLog';
+    try{
+      const res = await gs(fn, { token: S.token, id: id, reason: reason });
+      closeModal();
+      toast(res.message, 'ok');
+      await reloadAll();
+    }catch(err){ toastErr(err); }
+  };
+  show('modal', true);
+}
+
+function closeModal(){
+  show('modal', false);
+  document.getElementById('modalOk').onclick = null;
+}
+
+/** ドライブの共有URLから、サムネイル表示用のURLを組み立てる（sz=幅指定） */
+function toThumbUrl_(driveUrl, sz){
+  const m = String(driveUrl || '').match(/\/d\/([^/]+)/);
+  if (!m) return driveUrl;
+  return 'https://drive.google.com/thumbnail?id=' + m[1] + '&sz=w' + (sz || 200);
+}
+
+function openPhotoViewer(driveUrl){
+  document.getElementById('modalTitle').textContent = '📷 証拠写真';
+  document.getElementById('modalBody').innerHTML =
+    '<img src="'+esc(toThumbUrl_(driveUrl, 1200))+'" style="width:100%; border-radius:10px; display:block;">';
+  document.getElementById('modalOk').style.display = 'none';
+  show('modal', true);
+}
+
+/**
+ * 起動のたびに呼ばれ、まだ読んでいない新しいお知らせがあれば自動で表示する。
+ * 「読んだ」かどうかはこの端末のlocalStorageに最新のお知らせIDを覚えておくだけの簡易な仕組み
+ * （kp_meなどと同じパターン）。
+ */
+function checkAnnouncements(){
+  if (!S.announcements.length) return;
+  const latest = S.announcements[0]; // サーバー側で新しい順にソート済み
+  const seen = localStorage.getItem('kp_seen_announcement');
+  if (seen !== latest.id) openAnnouncement(latest, true);
+}
+
+function openAnnouncement(a, markSeen){
+  document.getElementById('modalTitle').textContent = '📢 ' + a.title;
+  document.getElementById('modalBody').innerHTML =
+      '<p class="muted">' + esc(a.datetime) + '</p>'
+    + '<p style="white-space:pre-wrap;">' + escapeHtml(a.body) + '</p>';
+  document.getElementById('modalOk').style.display = 'none';
+  if (markSeen) localStorage.setItem('kp_seen_announcement', a.id);
+  show('modal', true);
+}
+
+/** 右上の📢ボタンから、これまでのお知らせを一覧でいつでも見返せるようにする */
+function openAnnouncementList(){
+  document.getElementById('modalTitle').textContent = 'お知らせ';
+  document.getElementById('modalOk').style.display = 'none';
+  document.getElementById('modalBody').innerHTML = S.announcements.length
+    ? S.announcements.map(function(a){
+        return '<div class="list-item" style="align-items:flex-start;">'
+          + '<div class="main">'
+          + '<div class="title">' + escapeHtml(a.title) + '</div>'
+          + '<div class="sub">' + esc(a.datetime) + '</div>'
+          + '<p style="white-space:pre-wrap; margin:6px 0 0;">' + escapeHtml(a.body) + '</p>'
+          + '</div></div>';
+      }).join('')
+    : '<p class="muted">お知らせはまだありません</p>';
+  if (S.announcements.length) localStorage.setItem('kp_seen_announcement', S.announcements[0].id);
+  show('modal', true);
+}
+
+/**
+ * 右上の📝ボタンから開く、「不具合・要望を報告する」ダイアログ。
+ * 送信すると、サーバー側の submitFeedback がスプレッドシートの
+ * 「要望・不具合報告」シートに1行足す（エラーログとは別の仕組み）。
+ */
+function openFeedback(){
+  document.getElementById('modalTitle').textContent = '不具合・要望を報告する';
+  document.getElementById('modalBody').innerHTML =
+      '<p class="muted">気づいたこと・直してほしいことを書いてください。'
+    + '今見ている画面（' + esc(S.view) + '）とあなたの名前も一緒に記録されます。</p>'
+    + '<div class="form"><label>内容'
+    + '<textarea id="fb_message" rows="5" placeholder="例：ごほうびのボタンがちょっと押しにくい"></textarea>'
+    + '</label></div>';
+  document.getElementById('modalOk').style.display = '';
+  document.getElementById('modalOk').textContent = '報告する';
+  document.getElementById('modalOk').onclick = async function(){
+    const message = document.getElementById('fb_message').value.trim();
+    if (!message){ toast('内容を入力してください', 'err'); return; }
+    const btn = document.getElementById('modalOk');
+    btn.disabled = true;
+    try{
+      const res = await gs('submitFeedback', { token: S.token, actorId: S.me, message: message, view: S.view });
+      closeModal();
+      toast(res.message, 'ok');
+    }catch(err){ toastErr(err); }
+    finally{ btn.disabled = false; }
+  };
+  show('modal', true);
+}
+
+
+/* ============================================================
+   7. 設定（役割＝親のメンバーだけが使える、メンバー・家事・ごほうびの管理）
+   ============================================================ */
+
+function renderSettingsTab(){
+  if (!isParent()) return;
+  renderMemberSettings();
+  renderChoreSettings();
+  renderRewardSettings();
+}
+
+function togglePw(inputId, btn){
+  const el = document.getElementById(inputId);
+  const show = el.type === 'password';
+  el.type = show ? 'text' : 'password';
+  btn.textContent = show ? '🙈' : '👁';
+  btn.setAttribute('aria-label', show ? 'パスワードを隠す' : 'パスワードを表示');
+}
+
+async function doChangeFamilyPassword(){
+  const current = document.getElementById('fp_current').value;
+  const next    = document.getElementById('fp_new').value;
+  const errEl = document.getElementById('fp_error');
+  errEl.textContent = '';
+  if (!current || !next){ errEl.textContent = '現在のパスワードと新しいパスワードを入力してください'; return; }
+  try{
+    const res = await gs('changeFamilyPassword', { token: S.token, actorId: S.me, currentPassword: current, newPassword: next });
+    if (!res.ok){ errEl.textContent = res.message; return; }
+    document.getElementById('fp_current').value = '';
+    document.getElementById('fp_new').value = '';
+    toast('パスワードを変更しました', 'ok');
+  }catch(err){ errEl.textContent = errText(err); }
+}
+
+function renderMemberSettings(){
+  const el = document.getElementById('s_memberList');
+  el.innerHTML = S.members.length
+    ? S.members.map(function(m){
+        return '<div class="list-item">'
+          + '<div class="main">'
+          + '<div class="title">'+escapeHtml(m.name)+(m.role==='親'?' <span class="badge done">親</span>':'')+'</div>'
+          + '<div class="sub">表示順 '+m.order+'</div>'
+          + '</div>'
+          + '<div class="actions"><button class="btn tiny" onclick="openMemberForm(\''+esc(m.id)+'\')">編集</button></div>'
+          + '</div>';
+      }).join('')
+    : '<p class="muted">メンバーがいません</p>';
+}
+
+function renderChoreSettings(){
+  const el = document.getElementById('s_choreList');
+  el.innerHTML = S.chores.length
+    ? S.chores.map(function(c){
+        const rotationNames = (c.rotation || []).map(memberName).join('・');
+        return '<div class="list-item">'
+          + '<div class="main">'
+          + '<div class="title">'+escapeHtml(c.name)+(c.daily?' <span class="badge done">毎日</span>':'')+'</div>'
+          + '<div class="sub">+'+c.points+'pt　表示順 '+c.order+(rotationNames?'　担当ローテーション：'+escapeHtml(rotationNames):'')+'</div>'
+          + '</div>'
+          + '<div class="actions"><button class="btn tiny" onclick="openChoreForm(\''+esc(c.id)+'\')">編集</button></div>'
+          + '</div>';
+      }).join('')
+    : '<p class="muted">家事が登録されていません</p>';
+}
+
+function renderRewardSettings(){
+  const el = document.getElementById('s_rewardList');
+  el.innerHTML = S.rewards.length
+    ? S.rewards.map(function(r){
+        return '<div class="list-item">'
+          + '<div class="main">'
+          + '<div class="title">'+escapeHtml(r.name)+'</div>'
+          + '<div class="sub">-'+r.cost+'pt　表示順 '+r.order+'</div>'
+          + '</div>'
+          + '<div class="actions"><button class="btn tiny" onclick="openRewardForm(\''+esc(r.id)+'\')">編集</button></div>'
+          + '</div>';
+      }).join('')
+    : '<p class="muted">ごほうびが登録されていません</p>';
+}
+
+function openMemberForm(memberId){
+  const editing = !!memberId;
+  const m = editing ? S.members.filter(function(x){ return x.id === memberId; })[0] : null;
+  document.getElementById('modalTitle').textContent = editing ? 'メンバーを編集' : 'メンバーを追加';
+  document.getElementById('modalBody').innerHTML =
+      '<div class="form">'
+    + '<label>名前<input type="text" id="sm_name" value="'+esc(m?m.name:'')+'"></label>'
+    + '<label>役割<select id="sm_role"><option value="">（子どもなど）</option><option value="親">親</option></select></label>'
+    + '<label>表示順<input type="text" id="sm_order" value="'+(m?m.order:(S.members.length+1))+'"></label>'
+    + '<label>メールアドレス（任意。「親」の役割の人が入力すると、ごほうびの受け渡し待ちをメールで知らせます）'
+    + '<input type="text" id="sm_email" value="'+esc(m?m.email:'')+'" placeholder="例：parent@example.com"></label>'
+    + (editing ? '<label class="check"><input type="checkbox" id="sm_active" checked> 有効（オフにすると一覧から消えます）</label>' : '')
+    + '</div>';
+  document.getElementById('sm_role').value = m ? (m.role || '') : '';
+  document.getElementById('modalOk').style.display = '';
+  document.getElementById('modalOk').textContent = editing ? '保存' : '追加';
+  document.getElementById('modalOk').onclick = async function(){
+    const name  = document.getElementById('sm_name').value.trim();
+    const role  = document.getElementById('sm_role').value;
+    const order = Number(document.getElementById('sm_order').value || 999);
+    const email = document.getElementById('sm_email').value.trim();
+    if (!name){ toast('名前を入力してください', 'err'); return; }
+    try{
+      if (editing){
+        const active = document.getElementById('sm_active').checked;
+        await gs('updateMember', { token: S.token, actorId: S.me, memberId: memberId,
+          patch: { name: name, role: role, order: order, active: active, email: email } });
+      } else {
+        await gs('addMember', { token: S.token, actorId: S.me, name: name, role: role, order: order, email: email });
+      }
+      closeModal();
+      toast('保存しました', 'ok');
+      await reloadAll();
+    }catch(err){ toastErr(err); }
+  };
+  show('modal', true);
+}
+
+function openChoreForm(choreId){
+  const editing = !!choreId;
+  const c = editing ? S.chores.filter(function(x){ return x.id === choreId; })[0] : null;
+  document.getElementById('modalTitle').textContent = editing ? '家事を編集' : '家事を追加';
+  const rotationSet = toKeySet_(c ? c.rotation : []);
+  document.getElementById('modalBody').innerHTML =
+      '<div class="form">'
+    + '<label>家事名<input type="text" id="sc_name" value="'+esc(c?c.name:'')+'"></label>'
+    + '<label>ポイント<input type="text" id="sc_points" value="'+(c?c.points:5)+'"></label>'
+    + '<label>表示順<input type="text" id="sc_order" value="'+(c?c.order:(S.chores.length+1))+'"></label>'
+    + '<label class="check"><input type="checkbox" id="sc_daily"'+(c&&c.daily?' checked':'')+'> 毎日の家事（「記録」タブに今日やったかどうかが表示されます）</label>'
+    + '<label>担当ローテーション（任意。選んだ人の中で1週間ごとに担当が回ります）'
+    + '<div class="who-list rotation-pick">' + S.members.map(function(m){
+        return '<label class="check"><input type="checkbox" class="sc_rot" value="'+esc(m.id)+'"'+(rotationSet[m.id]?' checked':'')+'> '+escapeHtml(m.name)+'</label>';
+      }).join('') + '</div></label>'
+    + (editing ? '<label class="check"><input type="checkbox" id="sc_active" checked> 有効（オフにすると一覧から消えます）</label>' : '')
+    + '</div>';
+  document.getElementById('modalOk').style.display = '';
+  document.getElementById('modalOk').textContent = editing ? '保存' : '追加';
+  document.getElementById('modalOk').onclick = async function(){
+    const name   = document.getElementById('sc_name').value.trim();
+    const points = Number(document.getElementById('sc_points').value || 0);
+    const order  = Number(document.getElementById('sc_order').value || 999);
+    const daily  = document.getElementById('sc_daily').checked;
+    const rotation = Array.prototype.slice.call(document.querySelectorAll('.sc_rot:checked')).map(function(el){ return el.value; });
+    if (!name){ toast('家事名を入力してください', 'err'); return; }
+    try{
+      if (editing){
+        const active = document.getElementById('sc_active').checked;
+        await gs('updateChore', { token: S.token, actorId: S.me, choreId: choreId,
+          patch: { name: name, points: points, order: order, active: active, daily: daily, rotation: rotation } });
+      } else {
+        await gs('addChore', { token: S.token, actorId: S.me, name: name, points: points, order: order, daily: daily, rotation: rotation });
+      }
+      closeModal();
+      toast('保存しました', 'ok');
+      await reloadAll();
+    }catch(err){ toastErr(err); }
+  };
+  show('modal', true);
+}
+
+function openRewardForm(rewardId){
+  const editing = !!rewardId;
+  const r = editing ? S.rewards.filter(function(x){ return x.id === rewardId; })[0] : null;
+  document.getElementById('modalTitle').textContent = editing ? 'ごほうびを編集' : 'ごほうびを追加';
+  document.getElementById('modalBody').innerHTML =
+      '<div class="form">'
+    + '<label>ごほうび名<input type="text" id="sr_name" value="'+esc(r?r.name:'')+'"></label>'
+    + '<label>必要ポイント<input type="text" id="sr_cost" value="'+(r?r.cost:20)+'"></label>'
+    + '<label>表示順<input type="text" id="sr_order" value="'+(r?r.order:(S.rewards.length+1))+'"></label>'
+    + (editing ? '<label class="check"><input type="checkbox" id="sr_active" checked> 有効（オフにすると一覧から消えます）</label>' : '')
+    + '</div>';
+  document.getElementById('modalOk').style.display = '';
+  document.getElementById('modalOk').textContent = editing ? '保存' : '追加';
+  document.getElementById('modalOk').onclick = async function(){
+    const name  = document.getElementById('sr_name').value.trim();
+    const cost  = Number(document.getElementById('sr_cost').value || 0);
+    const order = Number(document.getElementById('sr_order').value || 999);
+    if (!name){ toast('ごほうび名を入力してください', 'err'); return; }
+    try{
+      if (editing){
+        const active = document.getElementById('sr_active').checked;
+        await gs('updateReward', { token: S.token, actorId: S.me, rewardId: rewardId,
+          patch: { name: name, cost: cost, order: order, active: active } });
+      } else {
+        await gs('addReward', { token: S.token, actorId: S.me, name: name, cost: cost, order: order });
+      }
+      closeModal();
+      toast('保存しました', 'ok');
+      await reloadAll();
+    }catch(err){ toastErr(err); }
+  };
+  show('modal', true);
+}
+
+
+/* ============================================================
+   8. 小さな便利関数
+   ============================================================ */
+
+function memberName(id){
+  const m = S.members.filter(function(x){ return x.id === id; })[0];
+  return m ? m.name : '';
+}
+
+function balanceOf(id){
+  const b = S.balances.filter(function(x){ return x.memberId === id; })[0];
+  return b ? b.balance : 0;
+}
+
+/** サーバーから来た "メンバーID|家事ID" の配列を、O(1)で引ける {キー: true} に変える */
+function toKeySet_(arr){
+  const set = {};
+  (arr || []).forEach(function(k){ set[k] = true; });
+  return set;
+}
+
+function memberSegHtml(selectedId, fnName){
+  if (!S.members.length) return '<p class="muted">メンバーが登録されていません</p>';
+  return S.members.map(function(m){
+    return '<button class="'+(m.id===selectedId?'active':'')+'" onclick="'+fnName+'(\''+esc(m.id)+'\')">'
+      + escapeHtml(m.name) + '</button>';
+  }).join('');
+}
+
+function show(id, visible){
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('hidden', !visible);
+}
+
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+const escapeHtml = esc;
+
+function toast(msg, kind){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast' + (kind ? ' '+kind : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(function(){ el.classList.add('hidden'); }, 3200);
+}
+
+function errText(err){
+  return (err && err.message) ? err.message : String(err);
+}
+
+function toastErr(err){
+  toast(errText(err), 'err');
+  console.error(err);
+}
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js'); });
+}
+</script>
+</body>
+</html>
