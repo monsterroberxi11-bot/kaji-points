@@ -323,6 +323,40 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--primary); outlin
   .toast{bottom:32px;}
   .mobile-only{display:none;}  /* 証拠写真はスマホでの撮影を想定しているためPCでは出さない */
 }
+
+/* ── 要望チャット（Routine Bank と同じ見た目）───────────────── */
+.chat-icon{position:relative;}
+.chat-icon .dot{position:absolute; top:-3px; right:-5px; min-width:16px; height:16px; padding:0 4px; border-radius:999px;
+  background:var(--danger); color:#fff; font-size:10px; line-height:16px; font-weight:700;}
+.chat{position:fixed; inset:0; z-index:45; background:var(--bg); display:flex; flex-direction:column; padding-top:env(safe-area-inset-top);}
+.chat-top{display:flex; align-items:center; gap:8px; padding:10px 12px; background:var(--card); border-bottom:1px solid var(--line);}
+.chat-title{flex:1; text-align:center; font-weight:800;}
+.chat-spacer{width:72px;}
+.chat-body{flex:1; overflow-y:auto; padding:14px 12px; display:flex; flex-direction:column; gap:10px;}
+.bubble{max-width:80%; padding:10px 13px; border-radius:16px; font-size:14.5px; line-height:1.55; white-space:pre-wrap; word-break:break-word;}
+.bubble.dev{align-self:flex-start; background:#fff; border:1px solid var(--line); border-top-left-radius:4px;}
+.bubble.me{align-self:flex-end; background:var(--primary); color:#fff; border-top-right-radius:4px;}
+.bubble .who{font-size:11px; font-weight:800; color:var(--primary-dark); margin-bottom:2px;}
+.bubble.unsent{align-self:center; background:none; color:var(--muted); font-size:12.5px; padding:4px 8px;}
+.bubble .unsend{border:0; background:none; color:inherit; opacity:.85; text-decoration:underline; font-size:10.5px; padding:0 0 0 4px; cursor:pointer;}
+.bubble .at{font-size:10.5px; opacity:.7; margin-top:4px; text-align:right;}
+.chat-note{align-self:center; font-size:12px; color:var(--muted); text-align:center;}
+.chat-input{display:flex; gap:8px; align-items:flex-end; padding:10px 12px; padding-bottom:calc(10px + env(safe-area-inset-bottom));
+  background:var(--card); border-top:1px solid var(--line);}
+.chat-input textarea{flex:1; margin:0; resize:none; min-height:44px; max-height:120px;}
+
+/* ── チュートリアル ───────────────── */
+.tour{position:fixed; inset:0; z-index:58;}
+.tour-hole{position:fixed; border-radius:12px; pointer-events:none; box-shadow:0 0 0 3px var(--primary), 0 0 0 9999px rgba(0,0,0,.6); transition:all .25s ease;}
+.tour-hole.none{left:50% !important; top:50% !important; width:0 !important; height:0 !important; box-shadow:0 0 0 9999px rgba(0,0,0,.6);}
+.tour-card{position:fixed; left:50%; transform:translateX(-50%); width:calc(100% - 32px); max-width:380px;
+  background:#fff; color:var(--text); border-radius:16px; padding:16px; box-shadow:0 8px 30px rgba(0,0,0,.3); transition:top .25s ease;}
+.tour-card h3{margin:0 0 6px; font-size:16.5px;}
+.tour-card p{margin:0; font-size:14px; line-height:1.65;}
+.tour-foot{display:flex; align-items:center; gap:8px; margin-top:14px;}
+.tour-dots{flex:1; display:flex; gap:5px;}
+.tour-dots span{width:7px; height:7px; border-radius:50%; background:var(--line);}
+.tour-dots span.on{background:var(--primary);}
 </style>
 
 </head>
@@ -400,7 +434,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--primary); outlin
     </div>
     <div class="topbar-left">
       <button class="icon-btn" onclick="openAnnouncementList()" title="お知らせ">📢</button>
-      <button class="icon-btn" onclick="openFeedback()" title="不具合・要望を報告する">📝</button>
+      <button class="icon-btn chat-icon" id="chatBtn" onclick="openChat()" title="要望・お問い合わせ">💬<span class="dot hidden" id="chatDot">!</span></button>
       <button class="icon-btn" onclick="reloadAll()" title="最新に更新">⟳</button>
       <button class="icon-btn" onclick="doLogout()" title="ログアウト">⏻</button>
     </div>
@@ -536,6 +570,35 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--primary); outlin
 
   <!-- スマホ用の下タブ -->
   <nav class="bottomnav" id="bottomnav"></nav>
+</div>
+
+<!-- ── 要望チャット（全画面）。開発者（Routine Bank と同じ管理者パネル）に届き、返事もここに届く ── -->
+<div id="chatScreen" class="chat hidden">
+  <div class="chat-top">
+    <button class="btn tiny" onclick="closeChat()">← もどる</button>
+    <div class="chat-title">要望・お問い合わせ</div>
+    <span class="chat-spacer"></span>
+  </div>
+  <div class="chat-body" id="chatBody"></div>
+  <form class="chat-input" onsubmit="sendChat(); return false;">
+    <textarea id="chatText" rows="2" maxlength="1000" placeholder="こうしてほしい、ここが動かない…など"></textarea>
+    <button class="btn primary" id="chatSend" type="submit">送信</button>
+  </form>
+</div>
+
+<!-- ── チュートリアル（はじめて開いた人向け。本物の画面を光らせて説明）── -->
+<div id="tour" class="tour hidden">
+  <div class="tour-hole" id="tourHole"></div>
+  <div class="tour-card" id="tourCard">
+    <h3 id="tourTitle"></h3>
+    <p id="tourText"></p>
+    <div class="tour-foot">
+      <div class="tour-dots" id="tourDots"></div>
+      <button class="btn tiny" id="tourSkip" onclick="endTour()">スキップ</button>
+      <button class="btn tiny" id="tourBack" onclick="tourGo(-1)">もどる</button>
+      <button class="btn tiny primary" id="tourNext" onclick="tourGo(1)">次へ</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── ダイアログ（自分を変更・取消） ────────────────── -->
@@ -776,6 +839,8 @@ function doWhoChange(id){
   renderRecordTab();
   renderRedeemTab();
   toast(memberName(id) + 'にしました', 'ok');
+  checkChatUnread_();
+  maybeStartTour_();
 }
 
 async function startApp(){
@@ -790,6 +855,8 @@ async function startApp(){
   renderAll();
   switchView('home');
   checkAnnouncements();
+  checkChatUnread_();
+  maybeStartTour_();
 }
 
 /** 全データを読み直して、開いているタブに関わらず再描画する */
@@ -1307,40 +1374,11 @@ function openAnnouncementList(){
           + '</div></div>';
       }).join('')
     : '<p class="muted">お知らせはまだありません</p>';
+  document.getElementById('modalBody').insertAdjacentHTML('beforeend',
+    '<button class="btn block" style="margin-top:12px" onclick="startTour()">📖 使い方をもう一度見る</button>');
   if (S.announcements.length) localStorage.setItem('kp_seen_announcement', S.announcements[0].id);
   show('modal', true);
 }
-
-/**
- * 右上の📝ボタンから開く、「不具合・要望を報告する」ダイアログ。
- * 送信すると、サーバー側の submitFeedback がスプレッドシートの
- * 「要望・不具合報告」シートに1行足す（エラーログとは別の仕組み）。
- */
-function openFeedback(){
-  document.getElementById('modalTitle').textContent = '不具合・要望を報告する';
-  document.getElementById('modalBody').innerHTML =
-      '<p class="muted">気づいたこと・直してほしいことを書いてください。'
-    + '今見ている画面（' + esc(S.view) + '）とあなたの名前も一緒に記録されます。</p>'
-    + '<div class="form"><label>内容'
-    + '<textarea id="fb_message" rows="5" placeholder="例：ごほうびのボタンがちょっと押しにくい"></textarea>'
-    + '</label></div>';
-  document.getElementById('modalOk').style.display = '';
-  document.getElementById('modalOk').textContent = '報告する';
-  document.getElementById('modalOk').onclick = async function(){
-    const message = document.getElementById('fb_message').value.trim();
-    if (!message){ toast('内容を入力してください', 'err'); return; }
-    const btn = document.getElementById('modalOk');
-    btn.disabled = true;
-    try{
-      const res = await gs('submitFeedback', { token: S.token, actorId: S.me, message: message, view: S.view });
-      closeModal();
-      toast(res.message, 'ok');
-    }catch(err){ toastErr(err); }
-    finally{ btn.disabled = false; }
-  };
-  show('modal', true);
-}
-
 
 /* ============================================================
    7. 設定（役割＝親のメンバーだけが使える、メンバー・家事・ごほうびの管理）
@@ -1481,7 +1519,7 @@ function openChoreForm(choreId){
   document.getElementById('modalOk').textContent = editing ? '保存' : '追加';
   document.getElementById('modalOk').onclick = async function(){
     const name   = document.getElementById('sc_name').value.trim();
-    const points = Number(document.getElementById('sc_points').value || 0);
+    const points = document.getElementById('sc_points').value.trim();   // 数字かどうかはサーバーで確かめる
     const order  = Number(document.getElementById('sc_order').value || 999);
     const daily  = document.getElementById('sc_daily').checked;
     const rotation = Array.prototype.slice.call(document.querySelectorAll('.sc_rot:checked')).map(function(el){ return el.value; });
@@ -1517,7 +1555,7 @@ function openRewardForm(rewardId){
   document.getElementById('modalOk').textContent = editing ? '保存' : '追加';
   document.getElementById('modalOk').onclick = async function(){
     const name  = document.getElementById('sr_name').value.trim();
-    const cost  = Number(document.getElementById('sr_cost').value || 0);
+    const cost  = document.getElementById('sr_cost').value.trim();     // 数字かどうかはサーバーで確かめる
     const order = Number(document.getElementById('sr_order').value || 999);
     if (!name){ toast('ごほうび名を入力してください', 'err'); return; }
     try{
@@ -1536,6 +1574,242 @@ function openRewardForm(rewardId){
   show('modal', true);
 }
 
+
+
+/* ============================================================
+   7.5 要望チャット（開発者に要望・不具合を送る。返事もここに届く）
+   送り先は Routine Bank のサーバー。開発者は Routine Bank と同じ管理者パネルで、
+   どちらのアプリの要望も1か所で読んで返信できる。やりとりは「家庭×人」ごと（同じ端末でもほかの人には見えない）
+   ============================================================ */
+
+const FEEDBACK_URL = 'https://script.google.com/macros/s/AKfycbwYVPlYAM3Xel3O8NP3bErPGCtzW9Mua5WtuWhOv6VHIaDDmb_oT354htcyXW-SFjgboQ/exec';
+const CHAT_WELCOME = 'こんにちは！家事ポイントを作っている開発者です。\n「こうしてほしい」「ここが動かない」など、なんでも送ってね。返事はこの画面に届きます。';
+let chatMessages = [];
+
+function chatKey_(name){ return 'kp_chat_' + name + '_' + S.familyId + '_' + S.me; }
+function chatThreadId_(){
+  let id = localStorage.getItem(chatKey_('thread'));
+  if (!id){
+    id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)).replace(/[^A-Za-z0-9-]/g, '');
+    localStorage.setItem(chatKey_('thread'), id);
+  }
+  return id;
+}
+
+async function feedbackCall_(fnName, args){
+  let res;
+  try{
+    res = await fetch(FEEDBACK_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ fn: fnName, args: [args] }) });
+  }catch(e){ throw new Error('インターネットにつながっていません'); }
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error);
+  return data.result;
+}
+
+async function openChat(){
+  show('chatScreen', true);
+  renderChat_('読み込み中…');
+  try{
+    const r = await feedbackCall_('getFeedbackThread', { threadId: chatThreadId_() });
+    chatMessages = r.messages;
+    renderChat_('');
+    markChatSeen_();
+  }catch(err){ renderChat_('⚠️ ' + errText(err)); }
+}
+
+function closeChat(){ show('chatScreen', false); }
+
+async function sendChat(){
+  const box = document.getElementById('chatText');
+  const text = box.value.trim();
+  if (!text) return;
+  const btn = document.getElementById('chatSend');
+  btn.disabled = true;
+  try{
+    const r = await feedbackCall_('sendFeedback', {
+      threadId: chatThreadId_(), app: 'kaji', familyName: S.familyName, name: memberName(S.me), message: text
+    });
+    box.value = '';
+    chatMessages = r.messages;
+    renderChat_('');
+    markChatSeen_();
+  }catch(err){ toastErr(err); }
+  finally{ btn.disabled = false; }
+}
+
+function renderChat_(note){
+  const body = document.getElementById('chatBody');
+  body.innerHTML = '<div class="bubble dev"><div class="who">開発者</div>' + esc(CHAT_WELCOME) + '</div>' +
+    chatMessages.map(function(m){
+      if (m.unsent) return '<div class="bubble unsent">メッセージの送信を取り消しました</div>';
+      return '<div class="bubble ' + (m.from === 'dev' ? 'dev' : 'me') + '">' +
+        (m.from === 'dev' ? '<div class="who">開発者</div>' : '') + esc(m.text) +
+        '<div class="at">' + (m.at ? esc(m.at.slice(5, 16)) : '') +
+        (m.from === 'dev' ? '' : ' <button class="unsend" onclick="unsendChat(\'' + esc(m.id) + '\')">取り消す</button>') + '</div></div>';
+    }).join('') +
+    (note ? '<div class="chat-note">' + esc(note) + '</div>' : '') +
+    '<div class="chat-note">送った内容は開発者だけが見ます。名前や住所などは書かないでね。</div>';
+  body.scrollTop = body.scrollHeight;
+}
+
+function unsendChat(id){
+  document.getElementById('modalTitle').textContent = '送信を取り消す？';
+  document.getElementById('modalBody').innerHTML = '<p>開発者からも見えなくなります。</p>';
+  document.getElementById('modalOk').style.display = '';
+  document.getElementById('modalOk').textContent = '取り消す';
+  document.getElementById('modalOk').onclick = async function(){
+    try{
+      const r = await feedbackCall_('unsendFeedback', { threadId: chatThreadId_(), messageId: id });
+      closeModal();
+      chatMessages = r.messages;
+      renderChat_('');
+    }catch(err){ toastErr(err); }
+  };
+  show('modal', true);
+}
+
+function lastDevId_(msgs){
+  const dev = msgs.filter(function(m){ return m.from === 'dev'; });
+  return dev.length ? dev[dev.length - 1].id : '';
+}
+
+function markChatSeen_(){
+  localStorage.setItem(chatKey_('seen'), lastDevId_(chatMessages));
+  show('chatDot', false);
+}
+
+/** 起動したとき・人を切りかえたときに、まだ見ていない返事があれば 💬 に印を付ける */
+async function checkChatUnread_(){
+  show('chatDot', false);
+  if (!localStorage.getItem(chatKey_('thread'))) return;   // 一度も送っていなければ返事もない
+  try{
+    const r = await feedbackCall_('getFeedbackThread', { threadId: chatThreadId_() });
+    const last = lastDevId_(r.messages);
+    show('chatDot', !!last && last !== (localStorage.getItem(chatKey_('seen')) || ''));
+  }catch(e){ /* 圏外などは気にしない */ }
+}
+
+
+/* ============================================================
+   7.6 チュートリアル（はじめて開いた人に、本物の画面を光らせて説明）
+   人ごと・端末ごとに1回だけ自動で出る。📢（お知らせ）の中の「使い方をもう一度見る」でいつでも見られる
+   ============================================================ */
+
+let tourSteps = [];
+let tourIdx = 0;
+let tourTarget = null;
+
+function tourKey_(){ return 'kp_tour_' + S.familyId + '_' + S.me; }
+
+/** タブはスマホ（下）とPC（上）で場所がちがうので、見えている方を光らせる */
+function tourTab_(key){
+  return function(){
+    return Array.prototype.filter.call(document.querySelectorAll('[data-nav="' + key + '"]'), function(el){
+      return el.getBoundingClientRect().width > 0;
+    })[0];
+  };
+}
+function tourEl_(sel){ return function(){ return document.querySelector(sel); }; }
+
+function tourStepsFor_(parent){
+  const steps = [
+    { title: '🏆 家事ポイントへようこそ！', view: 'home',
+      text: '家事をするとポイントがたまって、ごほうびと交換できるアプリです。かんたんに使い方を紹介します。' },
+    { el: tourEl_('#rankList'), view: 'home', title: '🏆 今のポイント',
+      text: '家族みんなのポイントのランキングです。🔥は何日続けて家事をしたかの印です。' },
+    { el: tourTab_('record'), view: 'record', title: '✅ 記録',
+      text: '家事をしたら「記録」タブで、だれがやったかを選んで、やった家事をタップします。スマホなら証拠写真もつけられます。' },
+    { el: tourTab_('redeem'), title: '🎁 交換',
+      text: 'たまったポイントで、ごほうびを注文できます。注文した時点でポイントが引かれます。' },
+    { el: tourTab_('handover'), title: '🤝 受け渡し',
+      text: 'ごほうびを受け取ったら「受け取った」、親が渡したら「渡した」を押します。両方そろうと完了です。' },
+    { el: tourTab_('history'), title: '🕒 履歴',
+      text: 'これまでの記録が見られます。まちがえて押したときは、ここから「取消」できます。' }
+  ];
+  if (parent) steps.push({ el: tourTab_('settings'), title: '⚙️ 設定（親だけ）',
+    text: 'メンバー・家事・ごほうびの追加や、ポイントの変更はここでします。' });
+  steps.push(
+    { el: tourEl_('#chatBtn'), title: '💬 要望',
+      text: '「こうしてほしい」「ここが動かない」などは、ここから開発者に送れます。返事もここに届きます。' },
+    { el: tourEl_('#whoami'), title: '👤 自分',
+      text: '家族で1台を使うときは、ここを押して「自分」を切りかえます。' },
+    { title: '🎉 準備OK！', view: 'home',
+      text: 'さっそく家事を記録してみよう。この説明は 📢（お知らせ）の中の「使い方をもう一度見る」から、いつでも見られます。' }
+  );
+  return steps;
+}
+
+/** はじめての人だけ。お知らせなどの窓が開いていたら、閉じてから始める */
+function maybeStartTour_(){
+  if (localStorage.getItem(tourKey_())) return;
+  let tries = 0;
+  (function wait(){
+    const busy = !document.getElementById('modal').classList.contains('hidden') || !document.getElementById('chatScreen').classList.contains('hidden');
+    if (!busy) return startTour();
+    if (++tries < 240) setTimeout(wait, 500);
+  })();
+}
+
+function startTour(){
+  closeModal();
+  tourSteps = tourStepsFor_(isParent());
+  tourIdx = 0;
+  show('tour', true);
+  window.addEventListener('resize', placeTour_);
+  renderTour_();
+}
+
+function tourGo(d){
+  tourIdx += d;
+  if (tourIdx >= tourSteps.length) return endTour();
+  renderTour_();
+}
+
+function endTour(){
+  localStorage.setItem(tourKey_(), '1');
+  show('tour', false);
+  window.removeEventListener('resize', placeTour_);
+  if (S.view !== 'home') switchView('home');
+}
+
+function renderTour_(){
+  const st = tourSteps[tourIdx];
+  if (st.view && S.view !== st.view) switchView(st.view);
+  document.getElementById('tourTitle').textContent = st.title;
+  document.getElementById('tourText').textContent = st.text;
+  document.getElementById('tourDots').innerHTML = tourSteps.map(function(x, i){ return '<span' + (i === tourIdx ? ' class="on"' : '') + '></span>'; }).join('');
+  show('tourBack', tourIdx > 0);
+  show('tourSkip', tourIdx < tourSteps.length - 1);
+  document.getElementById('tourNext').textContent = tourIdx === tourSteps.length - 1 ? 'はじめる' : '次へ';
+  const el = st.el && st.el();
+  if (el && el.getBoundingClientRect().width){
+    const r0 = el.getBoundingClientRect();
+    if (r0.top < 60 || r0.bottom > window.innerHeight - 90) el.scrollIntoView({ block: 'center' });
+  }
+  tourTarget = el;
+  placeTour_();
+}
+
+/** 光らせる穴と説明カードの位置を合わせる。カードは穴とかぶらない側（上か下）に出す */
+function placeTour_(){
+  const hole = document.getElementById('tourHole');
+  const card = document.getElementById('tourCard');
+  const r = tourTarget && tourTarget.getBoundingClientRect();
+  if (!r || !r.width){
+    hole.className = 'tour-hole none';
+    card.style.top = Math.max(16, (window.innerHeight - card.offsetHeight) / 2) + 'px';
+    return;
+  }
+  const pad = 6;
+  hole.className = 'tour-hole';
+  hole.style.left = (r.left - pad) + 'px';
+  hole.style.top = (r.top - pad) + 'px';
+  hole.style.width = (r.width + pad * 2) + 'px';
+  hole.style.height = (r.height + pad * 2) + 'px';
+  const below = r.bottom + pad + 12;
+  card.style.top = (below + card.offsetHeight <= window.innerHeight - 8 ? below : Math.max(8, r.top - pad - 12 - card.offsetHeight)) + 'px';
+}
 
 /* ============================================================
    8. 小さな便利関数
