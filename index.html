@@ -777,7 +777,8 @@ async function loadBootstrapAndContinue(){
   S.chores      = b.chores;
   S.rewards     = b.rewards;
   S.balances    = b.balances;
-  S.announcements = b.announcements || [];
+  S.ownAnnouncements = b.announcements || [];
+  mergeAnnouncements_();
   S.today       = b.today;
   S.todayDone   = toKeySet_(b.todayDone);
   S.streaks     = b.streaks || {};
@@ -857,6 +858,7 @@ async function startApp(){
   checkAnnouncements();
   checkChatUnread_();
   maybeStartTour_();
+  loadDevNotices_();
 }
 
 /** 全データを読み直して、開いているタブに関わらず再描画する */
@@ -867,7 +869,8 @@ async function reloadAll(){
     S.chores   = b.chores;
     S.rewards  = b.rewards;
     S.balances = b.balances;
-    S.announcements = b.announcements || [];
+    S.ownAnnouncements = b.announcements || [];
+    mergeAnnouncements_();
     S.today       = b.today;
     S.todayDone   = toKeySet_(b.todayDone);
     S.streaks     = b.streaks || {};
@@ -1348,6 +1351,26 @@ function checkAnnouncements(){
   const latest = S.announcements[0]; // サーバー側で新しい順にソート済み
   const seen = localStorage.getItem('kp_seen_announcement');
   if (seen !== latest.id) openAnnouncement(latest, true);
+}
+
+/* 開発者のお知らせ：Routine Bank と同じ管理者パネルから送られてくる（要望チャットと同じ Routine Bank のサーバーから読む）。
+   この家庭のお知らせ（S.ownAnnouncements）とまぜて、新しい順に並べる */
+function mergeAnnouncements_(){
+  S.announcements = (S.ownAnnouncements || []).concat(S.devNotices || []).sort(function(a, b){
+    return String(a.datetime) < String(b.datetime) ? 1 : String(a.datetime) > String(b.datetime) ? -1 : 0;
+  });
+}
+
+async function loadDevNotices_(){
+  try{
+    const list = await feedbackCall_('getNotices', { app: 'kaji' });
+    S.devNotices = list.map(function(n){ return { id: n.id, datetime: n.at, title: n.title, body: n.body }; });
+  }catch(e){ return; }   // 圏外などは気にしない
+  mergeAnnouncements_();
+  // ほかの窓や使い方の説明が出ていなければ、まだ読んでいないお知らせを出す
+  const busy = !document.getElementById('modal').classList.contains('hidden') || !document.getElementById('tour').classList.contains('hidden')
+    || !document.getElementById('chatScreen').classList.contains('hidden');
+  if (!busy) checkAnnouncements();
 }
 
 function openAnnouncement(a, markSeen){
